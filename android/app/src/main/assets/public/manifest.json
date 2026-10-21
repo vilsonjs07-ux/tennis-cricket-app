@@ -1,0 +1,18 @@
+{
+  "name": "Tennis Cricket Pro",
+  "short_name": "Tennis Cricket",
+  "description": "Official Cricket Scoring App for Tennis Ball Matches & Tournaments • Zero LBW",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070B14",
+  "theme_color": "#070B14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
