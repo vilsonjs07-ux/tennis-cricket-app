@@ -1,13 +1,9 @@
 import React from 'react';
 import { useMatchStore } from '../store/useMatchStore';
-import { PlusCircle, PlayCircle, Trophy, Users, History, BarChart2, ShieldCheck, ArrowRight, Ban, Flame } from 'lucide-react';
+import { PlusCircle, PlayCircle, Trophy, Users, History, BarChart2, ShieldCheck, ArrowRight, Flame } from 'lucide-react';
 
-interface HomeScreenProps {
-  onOpenRules: () => void;
-}
-
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
-  const { currentMatch, matches, initNewMatchWizard, setActiveTab, loadMatchById } = useMatchStore();
+export const HomeScreen: React.FC = () => {
+  const { currentMatch, matches, savedTeams, initNewMatchWizard, setActiveTab, loadMatchById } = useMatchStore();
 
   const isLiveActive = currentMatch && (currentMatch.status === 'innings1' || currentMatch.status === 'innings2' || currentMatch.status === 'innings_break');
   const recentCompleted = matches.filter(m => m.status === 'completed').slice(0, 3);
@@ -62,23 +58,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
             <ShieldCheck size={12} />
             <span>TENNIS BALL CRICKET</span>
           </span>
-          <span
-            style={{
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              padding: '3px 9px',
-              borderRadius: 'var(--radius-full)',
-              background: 'rgba(239, 68, 68, 0.15)',
-              color: '#F87171',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <Ban size={12} />
-            <span>NO LBW RULE</span>
-          </span>
         </div>
 
         <h1
@@ -92,7 +71,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
             marginBottom: 6,
           }}
         >
-          Tennis<span style={{ color: 'var(--turf-green)' }}>Score</span> Pro
+          Tennis Cricket<span style={{ color: 'var(--turf-green)' }}> Pro</span>
         </h1>
 
         <p
@@ -104,7 +83,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
             lineHeight: 1.4,
           }}
         >
-          Official Cricket Laws • No LBW • Tournament Ready for T10, T12, T20 Tennis Ball Matches.
+          Professional match scoring, live stats & automated scorecards.
         </p>
 
         {/* Primary CTA */}
@@ -114,7 +93,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
           style={{ fontSize: '1.02rem', padding: '15px 20px' }}
         >
           <PlusCircle size={20} />
-          <span>Start Tennis Match</span>
+          <span>Start Cricket Match</span>
         </button>
       </div>
 
@@ -242,25 +221,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
         </div>
 
         <div
+          onClick={() => setActiveTab('teams')}
           style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
             padding: '12px 10px',
             textAlign: 'center',
+            cursor: 'pointer',
           }}
         >
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>RULES</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>TEAMS</div>
           <div
+            className="tabular-nums"
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '1.25rem',
+              fontSize: '1.4rem',
               fontWeight: 800,
               color: '#38BDF8',
               marginTop: 2,
             }}
           >
-            No LBW 🚫
+            {savedTeams?.length || 0}
           </div>
         </div>
       </div>
@@ -373,7 +355,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
         </button>
 
         <button
-          onClick={onOpenRules}
+          onClick={initNewMatchWizard}
           style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border-subtle)',
@@ -392,18 +374,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
               width: 38,
               height: 38,
               borderRadius: 'var(--radius-sm)',
-              background: 'rgba(239, 68, 68, 0.12)',
-              color: '#EF4444',
+              background: 'rgba(16, 185, 129, 0.12)',
+              color: '#10B981',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Ban size={20} />
+            <PlusCircle size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 700 }}>Rules (No LBW)</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Official Tennis Laws</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 700 }}>New Match</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Quick setup</div>
           </div>
         </button>
       </div>
@@ -445,12 +427,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenRules }) => {
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🎾</div>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>🏏</div>
             <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
               No matches recorded yet
             </div>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
-              Tap "Start Tennis Match" to set up your teams, toss, and score your first tournament game!
+              Tap "Start Cricket Match" to set up your teams, toss, and score your first tournament game!
             </p>
             <button onClick={initNewMatchWizard} className="btn-secondary" style={{ fontSize: '0.85rem' }}>
               Create Match

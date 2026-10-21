@@ -1,12 +1,7 @@
 import React from 'react';
 import { useMatchStore } from '../store/useMatchStore';
-import { BookOpen } from 'lucide-react';
 
-interface HeaderProps {
-  onOpenRules: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ onOpenRules }) => {
+export const Header: React.FC = () => {
   const { currentMatch, activeTab, setActiveTab } = useMatchStore();
 
   const isLive = currentMatch && (currentMatch.status === 'innings1' || currentMatch.status === 'innings2' || currentMatch.status === 'innings_break');
@@ -14,9 +9,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenRules }) => {
   return (
     <header className="top-header">
       <div className="logo-badge" onClick={() => setActiveTab('home')} style={{ cursor: 'pointer' }}>
-        <span style={{ fontSize: '1.4rem' }}>🎾</span>
+        <span style={{ fontSize: '1.4rem' }}>🏏</span>
         <span>
-          Tennis<span className="highlight">Score</span>
+          Tennis Cricket<span className="highlight"> Pro</span>
         </span>
       </div>
 
@@ -38,28 +33,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenRules }) => {
             <span>LIVE</span>
           </div>
         )}
-
-        <button
-          onClick={onOpenRules}
-          aria-label="Tennis Cricket Rules"
-          title="Tennis Cricket Rules (No LBW)"
-          style={{
-            background: 'rgba(255, 255, 255, 0.06)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '6px 10px',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '0.78rem',
-            fontWeight: 600,
-          }}
-        >
-          <BookOpen size={14} />
-          <span>Rules</span>
-        </button>
       </div>
     </header>
   );

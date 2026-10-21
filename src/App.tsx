@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useMatchStore } from './store/useMatchStore';
 import { Header } from './components/Header';
 import { Navbar } from './components/Navbar';
@@ -9,21 +9,19 @@ import { ScorecardScreen } from './components/Scorecard/ScorecardScreen';
 import { MatchHistoryScreen } from './components/MatchHistory/MatchHistoryScreen';
 import { StatsScreen } from './components/Stats/StatsScreen';
 import { TeamsScreen } from './components/Teams/TeamsScreen';
-import { GullyRulesGuideModal } from './components/GullyRulesGuideModal';
 
 export const App: React.FC = () => {
   const { activeTab } = useMatchStore();
-  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
 
   return (
     <div className="app-wrapper">
       <div className="mobile-frame">
         {/* Top Sticky Header */}
-        <Header onOpenRules={() => setIsRulesModalOpen(true)} />
+        <Header />
 
         {/* Dynamic Main Content Tab */}
         <main className="main-content">
-          {activeTab === 'home' && <HomeScreen onOpenRules={() => setIsRulesModalOpen(true)} />}
+          {activeTab === 'home' && <HomeScreen />}
           {activeTab === 'wizard' && <MatchWizard />}
           {activeTab === 'live' && <LiveScoringScreen />}
           {activeTab === 'scorecard' && <ScorecardScreen />}
@@ -34,12 +32,6 @@ export const App: React.FC = () => {
 
         {/* Bottom Navigation */}
         <Navbar />
-
-        {/* Rules Guide Modal */}
-        <GullyRulesGuideModal
-          isOpen={isRulesModalOpen}
-          onClose={() => setIsRulesModalOpen(false)}
-        />
       </div>
     </div>
   );

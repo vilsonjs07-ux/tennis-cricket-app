@@ -63,6 +63,12 @@ html, body {
   -webkit-user-select: none;
 }
 
+input, textarea, select {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  touch-action: manipulation;
+}
+
 /* Tabular figures for cricket scores */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

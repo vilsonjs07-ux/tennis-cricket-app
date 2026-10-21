@@ -1,7 +1,7 @@
 {
-  "name": "TennisScore Pro",
-  "short_name": "TennisScore",
-  "description": "Professional Tennis Ball Cricket Scoring App • Official Rules • No LBW",
+  "name": "Tennis Cricket Pro",
+  "short_name": "Tennis Cricket",
+  "description": "Official Cricket Scoring App for Tennis Ball Matches & Tournaments • Zero LBW",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#070B14",

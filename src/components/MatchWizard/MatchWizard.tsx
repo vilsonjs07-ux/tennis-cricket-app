@@ -8,10 +8,8 @@ import {
   Settings,
   Trophy,
   Plus,
+  Minus,
   Coins,
-  Shield,
-  Ban,
-  CheckCircle2,
 } from 'lucide-react';
 
 export const MatchWizard: React.FC = () => {
@@ -45,6 +43,20 @@ export const MatchWizard: React.FC = () => {
 
   const overs = wizardSettings.oversPerInnings || 8;
   const playersCount = wizardSettings.playersPerTeam || 8;
+
+  const handleOversChange = (delta: number) => {
+    navigator?.vibrate?.(15);
+    const current = wizardSettings.oversPerInnings || 8;
+    const next = Math.min(50, Math.max(1, current + delta));
+    updateWizardSettings({ oversPerInnings: next });
+  };
+
+  const handlePlayersChange = (delta: number) => {
+    navigator?.vibrate?.(15);
+    const current = wizardSettings.playersPerTeam || 8;
+    const next = Math.min(20, Math.max(2, current + delta));
+    updateWizardSettings({ playersPerTeam: next });
+  };
 
   // Add player to Team A
   const handleAddPlayerA = () => {
@@ -154,13 +166,12 @@ export const MatchWizard: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--turf-green)', letterSpacing: '0.5px' }}>
-            STEP {wizardStep} OF 4
+            STEP {wizardStep} OF 3
           </span>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: 800 }}>
             {wizardStep === 1 && 'Match Details'}
             {wizardStep === 2 && 'Teams & Squads'}
-            {wizardStep === 3 && 'Tennis Cricket Rules'}
-            {wizardStep === 4 && 'Toss & Opening Crease'}
+            {wizardStep === 3 && 'Toss & Lineup'}
           </h2>
         </div>
 
@@ -183,7 +194,7 @@ export const MatchWizard: React.FC = () => {
         <div
           style={{
             height: '100%',
-            width: `${(wizardStep / 4) * 100}%`,
+            width: `${(wizardStep / 3) * 100}%`,
             background: 'linear-gradient(90deg, #059669, #10B981)',
             transition: 'width 0.25s ease',
           }}
@@ -204,64 +215,247 @@ export const MatchWizard: React.FC = () => {
             />
           </div>
 
+          {/* Overs per Innings with Mobile Stepper */}
           <div className="input-group">
-            <label className="input-label">Match Format</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-              {[
-                { format: 't10', label: 'T10 (10 ov)', overs: 10 },
-                { format: 't12', label: 'T12 (12 ov)', overs: 12 },
-                { format: 't20', label: 'T20 (20 ov)', overs: 20 },
-                { format: 'custom', label: '8 Overs', overs: 8 },
-              ].map(item => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="input-label" style={{ marginBottom: 0 }}>Overs per Innings</label>
+              <span style={{ fontSize: '0.82rem', color: 'var(--turf-green)', fontWeight: 800 }}>
+                {wizardSettings.oversPerInnings || 8} OVERS
+              </span>
+            </div>
+
+            {/* Touch Stepper Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => handleOversChange(-1)}
+                aria-label="Decrease overs"
+                style={{
+                  width: 52,
+                  height: 48,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-card)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  flexShrink: 0,
+                }}
+              >
+                <Minus size={22} />
+              </button>
+
+              <input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                min="1"
+                max="50"
+                className="input-field tabular-nums"
+                style={{
+                  textAlign: 'center',
+                  fontSize: '1.35rem',
+                  fontWeight: 900,
+                  height: 48,
+                  color: '#34D399',
+                  padding: '8px 12px',
+                  userSelect: 'text',
+                  WebkitUserSelect: 'text',
+                }}
+                value={wizardSettings.oversPerInnings === 0 ? '' : (wizardSettings.oversPerInnings ?? 8)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    updateWizardSettings({ oversPerInnings: 0 });
+                  } else {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num)) {
+                      updateWizardSettings({ oversPerInnings: Math.min(50, Math.max(1, num)) });
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  if (!wizardSettings.oversPerInnings || wizardSettings.oversPerInnings < 1) {
+                    updateWizardSettings({ oversPerInnings: 8 });
+                  }
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => handleOversChange(1)}
+                aria-label="Increase overs"
+                style={{
+                  width: 52,
+                  height: 48,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-card)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  flexShrink: 0,
+                }}
+              >
+                <Plus size={22} />
+              </button>
+            </div>
+
+            {/* Quick 1-Tap Presets */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {[4, 6, 8, 10, 12, 15, 20].map(ov => (
                 <button
-                  key={item.format}
+                  key={ov}
                   type="button"
                   onClick={() => {
-                    updateWizardSettings({
-                      format: item.format as MatchFormat,
-                      oversPerInnings: item.overs,
-                    });
+                    navigator?.vibrate?.(15);
+                    updateWizardSettings({ oversPerInnings: ov });
                   }}
                   style={{
-                    background: wizardSettings.format === item.format ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
-                    border: `1px solid ${wizardSettings.format === item.format ? '#10B981' : 'var(--border-card)'}`,
-                    color: wizardSettings.format === item.format ? '#34D399' : 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-sm)',
+                    flex: 1,
+                    minWidth: 40,
                     padding: '8px 4px',
-                    fontSize: '0.75rem',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.76rem',
                     fontWeight: 700,
+                    background: (wizardSettings.oversPerInnings || 8) === ov ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `1px solid ${(wizardSettings.oversPerInnings || 8) === ov ? '#10B981' : 'var(--border-card)'}`,
+                    color: (wizardSettings.oversPerInnings || 8) === ov ? '#34D399' : 'var(--text-secondary)',
                     cursor: 'pointer',
+                    touchAction: 'manipulation',
                   }}
                 >
-                  {item.label}
+                  {ov} ov
                 </button>
               ))}
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div className="input-group">
-              <label className="input-label">Overs per Innings</label>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                className="input-field tabular-nums"
-                value={wizardSettings.oversPerInnings || 8}
-                onChange={e => updateWizardSettings({ oversPerInnings: Number(e.target.value) || 8 })}
-              />
+          {/* Players per Team with Mobile Stepper */}
+          <div className="input-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="input-label" style={{ marginBottom: 0 }}>Players per Team</label>
+              <span style={{ fontSize: '0.82rem', color: '#38BDF8', fontWeight: 800 }}>
+                {wizardSettings.playersPerTeam || 8} PLAYERS
+              </span>
             </div>
 
-            <div className="input-group">
-              <label className="input-label">Players per Team</label>
+            {/* Touch Stepper Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => handlePlayersChange(-1)}
+                aria-label="Decrease players"
+                style={{
+                  width: 52,
+                  height: 48,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-card)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  flexShrink: 0,
+                }}
+              >
+                <Minus size={22} />
+              </button>
+
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 min="2"
-                max="15"
+                max="20"
                 className="input-field tabular-nums"
-                value={wizardSettings.playersPerTeam || 8}
-                onChange={e => updateWizardSettings({ playersPerTeam: Number(e.target.value) || 8 })}
+                style={{
+                  textAlign: 'center',
+                  fontSize: '1.35rem',
+                  fontWeight: 900,
+                  height: 48,
+                  color: '#38BDF8',
+                  padding: '8px 12px',
+                  userSelect: 'text',
+                  WebkitUserSelect: 'text',
+                }}
+                value={wizardSettings.playersPerTeam === 0 ? '' : (wizardSettings.playersPerTeam ?? 8)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    updateWizardSettings({ playersPerTeam: 0 });
+                  } else {
+                    const num = parseInt(val, 10);
+                    if (!isNaN(num)) {
+                      updateWizardSettings({ playersPerTeam: Math.min(20, Math.max(2, num)) });
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  if (!wizardSettings.playersPerTeam || wizardSettings.playersPerTeam < 2) {
+                    updateWizardSettings({ playersPerTeam: 8 });
+                  }
+                }}
               />
+
+              <button
+                type="button"
+                onClick={() => handlePlayersChange(1)}
+                aria-label="Increase players"
+                style={{
+                  width: 52,
+                  height: 48,
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-card)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  flexShrink: 0,
+                }}
+              >
+                <Plus size={22} />
+              </button>
+            </div>
+
+            {/* Quick 1-Tap Presets */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+              {[5, 6, 7, 8, 9, 10, 11].map(pl => (
+                <button
+                  key={pl}
+                  type="button"
+                  onClick={() => {
+                    navigator?.vibrate?.(15);
+                    updateWizardSettings({ playersPerTeam: pl });
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: 40,
+                    padding: '8px 4px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                    background: (wizardSettings.playersPerTeam || 8) === pl ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `1px solid ${(wizardSettings.playersPerTeam || 8) === pl ? '#38BDF8' : 'var(--border-card)'}`,
+                    color: (wizardSettings.playersPerTeam || 8) === pl ? '#38BDF8' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  {pl} P
+                </button>
+              ))}
             </div>
           </div>
 
@@ -489,157 +683,15 @@ export const MatchWizard: React.FC = () => {
               className="btn-primary"
               style={{ flex: 2 }}
             >
-              <span>Next: Tennis Rules</span>
+              <span>Next: Toss & Lineup</span>
               <ChevronRight size={18} />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: TENNIS BALL RULES */}
+      {/* STEP 3: TOSS & OPENING CREASE */}
       {wizardStep === 3 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Mandatory Tennis Ball Rule Banner: NO LBW */}
-          <div
-            style={{
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              borderRadius: 'var(--radius-md)',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-            }}
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#EF4444',
-                flexShrink: 0,
-              }}
-            >
-              <Ban size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#FCA5A5' }}>
-                LBW RULE IS DISABLED
-              </div>
-              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                As per standard Tennis Ball Cricket conventions, Leg Before Wicket (LBW) cannot be given. All other official cricket rules strictly apply.
-              </div>
-            </div>
-          </div>
-
-          {/* Official Rule 1: No-Ball & Free Hit */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid #10B981',
-              borderRadius: 'var(--radius-md)',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FFFFFF' }}>
-                🚨 Free Hit on No-Balls
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                Front foot or waist height overstep grants 1 run penalty + Free Hit next delivery
-              </div>
-            </div>
-            <CheckCircle2 size={20} color="#10B981" />
-          </div>
-
-          {/* Official Rule 2: Wide Re-Ball */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid #10B981',
-              borderRadius: 'var(--radius-md)',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FFFFFF' }}>
-                ↔️ Wide Ball Tramlines & Re-Ball
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                1 run penalty, does not count as legal delivery, re-ball required
-              </div>
-            </div>
-            <CheckCircle2 size={20} color="#10B981" />
-          </div>
-
-          {/* Official Rule 3: Bowlers Must Alternate */}
-          <div
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid #10B981',
-              borderRadius: 'var(--radius-md)',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#FFFFFF' }}>
-                🔄 Alternating Bowlers per Over
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                Official MCC law: Same bowler cannot bowl consecutive overs from either end
-              </div>
-            </div>
-            <CheckCircle2 size={20} color="#10B981" />
-          </div>
-
-          {/* Max overs per bowler */}
-          <div className="input-group" style={{ marginTop: 6 }}>
-            <label className="input-label">Max Overs per Bowler (Quota)</label>
-            <input
-              type="number"
-              min="1"
-              max="10"
-              className="input-field tabular-nums"
-              value={wizardSettings.rules?.maxOversPerBowler || Math.ceil(overs / 4)}
-              onChange={e =>
-                updateWizardSettings({
-                  rules: {
-                    ...wizardSettings.rules!,
-                    maxOversPerBowler: Number(e.target.value) || 2,
-                  },
-                })
-              }
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-            <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>
-              <ChevronLeft size={18} />
-              <span>Back</span>
-            </button>
-            <button onClick={() => setWizardStep(4)} className="btn-primary" style={{ flex: 2 }}>
-              <span>Next: Toss & Openers</span>
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 4: TOSS & OPENING CREASE */}
-      {wizardStep === 4 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div
             style={{
@@ -837,7 +889,7 @@ export const MatchWizard: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setWizardStep(3)} className="btn-secondary" style={{ flex: 1 }}>
+            <button onClick={() => setWizardStep(2)} className="btn-secondary" style={{ flex: 1 }}>
               <ChevronLeft size={18} />
               <span>Back</span>
             </button>
