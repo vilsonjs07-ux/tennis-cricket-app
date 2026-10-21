@@ -19,9 +19,14 @@ export const ScoringKeypad: React.FC<ScoringKeypadProps> = ({
 }) => {
   const [isDebouncing, setIsDebouncing] = useState(false);
 
-  const handleAction = (action: () => void) => {
+  const handleAction = (action: () => void, isBigEvent = false) => {
     if (disabled || isDebouncing) return;
     setIsDebouncing(true);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(isBigEvent ? [40, 40, 60] : 25);
+      } catch (_) {}
+    }
     action();
     // 250ms debounce window to prevent accidental double-taps
     setTimeout(() => {

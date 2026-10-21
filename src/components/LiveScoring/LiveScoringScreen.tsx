@@ -30,6 +30,29 @@ export const LiveScoringScreen: React.FC = () => {
   const [isNextBowlerModalOpen, setIsNextBowlerModalOpen] = useState(false);
   const [isMoreExtrasModalOpen, setIsMoreExtrasModalOpen] = useState(false);
   const [celebration, setCelebration] = useState<CelebrationType>(null);
+  const [isScreenAwake, setIsScreenAwake] = useState(false);
+
+  // Keep phone screen awake during match scoring
+  React.useEffect(() => {
+    let sentinel: any = null;
+    const enableWakeLock = async () => {
+      if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+        try {
+          sentinel = await (navigator as any).wakeLock.request('screen');
+          setIsScreenAwake(true);
+        } catch (_) {}
+      }
+    };
+    enableWakeLock();
+
+    return () => {
+      if (sentinel) {
+        try {
+          sentinel.release();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   if (!currentMatch) {
     return (
