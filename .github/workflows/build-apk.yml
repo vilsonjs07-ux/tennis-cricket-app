@@ -7,6 +7,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build APK
@@ -31,7 +34,7 @@ jobs:
       - name: Accept Android SDK Licenses & Install Platforms
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "platforms;android-34" || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "platforms;android-34" "build-tools;35.0.0" "build-tools;34.0.0" || true
 
       - name: Install Dependencies
         run: npm ci
@@ -50,7 +53,7 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build.log
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
@@ -59,9 +62,20 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Upload Build Log on Failure
-        if: failure()
-        uses: actions/upload-artifact@v4
+      - name: Release APK (Direct Mobile Download)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
-          name: build-failure-log
-          path: android/build.log
+          tag_name: v-latest
+          name: Tennis Cricket Pro - Latest Android APK
+          body: |
+            ### 🏏 Tennis Cricket Pro - Android APK Download
+            Download the APK file directly to your phone below:
+            - Tap on **`TennisCricket-Pro.apk`** under Assets to download.
+            - Open the downloaded file on your Android mobile device and tap **Install**.
+          draft: false
+          prerelease: false
+          files: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
