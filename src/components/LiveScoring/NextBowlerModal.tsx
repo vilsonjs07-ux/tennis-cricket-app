@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { InningsState, Player, Team } from '../../types/cricket';
-import { Check, UserPlus } from 'lucide-react';
+import { InningsState, Team } from '../../types/cricket';
+import { useMatchStore } from '../../store/useMatchStore';
+import { Check, UserPlus, Plus, X } from 'lucide-react';
 
 interface NextBowlerModalProps {
   isOpen: boolean;
   onSelectBowler: (bowlerId: string) => void;
+  onClose?: () => void;
   innings: InningsState;
   bowlingTeam: Team;
   allowConsecutive: boolean;
@@ -13,14 +15,17 @@ interface NextBowlerModalProps {
 export const NextBowlerModal: React.FC<NextBowlerModalProps> = ({
   isOpen,
   onSelectBowler,
+  onClose,
   innings,
   bowlingTeam,
   allowConsecutive,
 }) => {
   if (!isOpen) return null;
 
+  const { addPlayerToCurrentMatch } = useMatchStore();
   const previousBowlerId = innings.previousBowlerId || innings.currentBowlerId;
   const [selectedBowlerId, setSelectedBowlerId] = useState<string>('');
+  const [newBowlerName, setNewBowlerName] = useState<string>('');
 
   const eligibleBowlers = bowlingTeam.players.map(player => {
     const isConsecutive = player.id === previousBowlerId;
@@ -35,17 +40,53 @@ export const NextBowlerModal: React.FC<NextBowlerModalProps> = ({
     };
   });
 
+  const handleAddNewBowler = () => {
+    if (!newBowlerName.trim()) return;
+    const added = addPlayerToCurrentMatch(bowlingTeam.id, newBowlerName.trim(), 'bowler');
+    if (added) {
+      setSelectedBowlerId(added.id);
+      setNewBowlerName('');
+    }
+  };
+
   const handleConfirm = () => {
-    if (!selectedBowlerId) {
-      alert('Please select the bowler for the upcoming over.');
+    let finalBowlerId = selectedBowlerId;
+    if (!finalBowlerId && newBowlerName.trim()) {
+      const added = addPlayerToCurrentMatch(bowlingTeam.id, newBowlerName.trim(), 'bowler');
+      if (added) {
+        finalBowlerId = added.id;
+        setSelectedBowlerId(added.id);
+        setNewBowlerName('');
+      }
+    }
+
+    if (!finalBowlerId) {
+      alert('Please select or add the bowler for the upcoming over.');
       return;
     }
-    onSelectBowler(selectedBowlerId);
+    onSelectBowler(finalBowlerId);
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-sheet" style={{ padding: '24px 20px' }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()} style={{ padding: '24px 20px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            <X size={20} />
+          </button>
+        )}
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div
             style={{
@@ -63,14 +104,15 @@ export const NextBowlerModal: React.FC<NextBowlerModalProps> = ({
             <UserPlus size={24} />
           </div>
           <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800 }}>
-            Over Completed! 🎯
+            Select Bowler 🎯
           </h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            Select the bowler to bowl Over {Math.floor(innings.legalDeliveries / 6) + 1}
+            Bowling Team: <strong style={{ color: '#FFFFFF' }}>{bowlingTeam.name}</strong> • Over {Math.floor(innings.legalDeliveries / 6) + 1}
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+        {/* Existing Bowlers List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
           {eligibleBowlers.map(({ player, isDisallowed, overs, wickets, runs }) => {
             const isSelected = selectedBowlerId === player.id;
             return (
@@ -118,6 +160,41 @@ export const NextBowlerModal: React.FC<NextBowlerModalProps> = ({
               </button>
             );
           })}
+        </div>
+
+        {/* ➕ Add New Bowler While Bowling */}
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px',
+            background: 'rgba(56, 189, 248, 0.06)',
+            border: '1px dashed rgba(56, 189, 248, 0.4)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#38BDF8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={14} />
+            <span>Add New Bowler to {bowlingTeam.name}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              placeholder="Enter bowler name..."
+              className="input-field"
+              value={newBowlerName}
+              onChange={e => setNewBowlerName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddNewBowler()}
+              style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+            />
+            <button
+              type="button"
+              onClick={handleAddNewBowler}
+              className="btn-secondary"
+              style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: '0.8rem', background: '#38BDF8', color: '#0F172A', fontWeight: 800 }}
+            >
+              Add & Select
+            </button>
+          </div>
         </div>
 
         <button onClick={handleConfirm} className="btn-primary">

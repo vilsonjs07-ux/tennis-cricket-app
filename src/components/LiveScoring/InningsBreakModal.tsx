@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { InningsState, Match, Player, Team } from '../../types/cricket';
-import { Trophy, ArrowRight, Play } from 'lucide-react';
+import { InningsState, Match } from '../../types/cricket';
+import { useMatchStore } from '../../store/useMatchStore';
+import { Trophy, Play, Plus } from 'lucide-react';
 
 interface InningsBreakModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const InningsBreakModal: React.FC<InningsBreakModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const { addPlayerToCurrentMatch } = useMatchStore();
   const target = innings1.totalRuns + 1;
   const chasingTeam = innings1.battingTeamId === match.teamA.id ? match.teamB : match.teamA;
   const defendingTeam = innings1.battingTeamId === match.teamA.id ? match.teamA : match.teamB;
@@ -24,6 +26,28 @@ export const InningsBreakModal: React.FC<InningsBreakModalProps> = ({
   const [strikerId, setStrikerId] = useState('');
   const [nonStrikerId, setNonStrikerId] = useState('');
   const [bowlerId, setBowlerId] = useState('');
+
+  const [newChasePlayer, setNewChasePlayer] = useState('');
+  const [newDefendPlayer, setNewDefendPlayer] = useState('');
+
+  const handleAddChasePlayer = () => {
+    if (!newChasePlayer.trim()) return;
+    const added = addPlayerToCurrentMatch(chasingTeam.id, newChasePlayer.trim(), 'batter');
+    if (added) {
+      if (!strikerId) setStrikerId(added.id);
+      else if (!nonStrikerId) setNonStrikerId(added.id);
+      setNewChasePlayer('');
+    }
+  };
+
+  const handleAddDefendPlayer = () => {
+    if (!newDefendPlayer.trim()) return;
+    const added = addPlayerToCurrentMatch(defendingTeam.id, newDefendPlayer.trim(), 'bowler');
+    if (added) {
+      setBowlerId(added.id);
+      setNewDefendPlayer('');
+    }
+  };
 
   const handleStart = () => {
     if (!strikerId || !nonStrikerId || !bowlerId) {
@@ -38,9 +62,11 @@ export const InningsBreakModal: React.FC<InningsBreakModalProps> = ({
     onStartSecondInnings(strikerId, nonStrikerId, bowlerId);
   };
 
+  const totalOvers = match.settings.oversPerInnings || match.settings.rules.oversPerInnings || 6;
+
   return (
     <div className="modal-overlay">
-      <div className="modal-sheet" style={{ padding: '24px 20px' }}>
+      <div className="modal-sheet" style={{ padding: '24px 20px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 18 }}>
           <div
             style={{
@@ -86,12 +112,12 @@ export const InningsBreakModal: React.FC<InningsBreakModalProps> = ({
           <div style={{ fontSize: '0.82rem', color: '#6EE7B7' }}>
             {chasingTeam.name} needs{' '}
             <strong style={{ color: '#FFFFFF', fontSize: '1rem' }}>{target} runs</strong> from{' '}
-            <strong>{match.settings.oversPerInnings * 6} balls</strong> to win!
+            <strong>{totalOvers * 6} balls</strong> ({totalOvers} ov) to win!
           </div>
         </div>
 
         {/* Select 2nd Innings Openers */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label className="input-label">Opening Striker ({chasingTeam.name})</label>
             <select className="input-field" value={strikerId} onChange={e => setStrikerId(e.target.value)}>
@@ -118,7 +144,28 @@ export const InningsBreakModal: React.FC<InningsBreakModalProps> = ({
             </select>
           </div>
 
-          <div className="input-group" style={{ marginBottom: 0 }}>
+          {/* Quick Add Batter to Chasing Team */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              placeholder={`Add batter to ${chasingTeam.name}...`}
+              className="input-field"
+              value={newChasePlayer}
+              onChange={e => setNewChasePlayer(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddChasePlayer()}
+              style={{ fontSize: '0.82rem', padding: '6px 10px' }}
+            />
+            <button
+              type="button"
+              onClick={handleAddChasePlayer}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+            >
+              <Plus size={14} /> Add
+            </button>
+          </div>
+
+          <div className="input-group" style={{ marginBottom: 0, marginTop: 6 }}>
             <label className="input-label">Opening Bowler ({defendingTeam.name})</label>
             <select className="input-field" value={bowlerId} onChange={e => setBowlerId(e.target.value)}>
               <option value="">-- Select Bowler --</option>
@@ -128,6 +175,27 @@ export const InningsBreakModal: React.FC<InningsBreakModalProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Quick Add Bowler to Defending Team */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              placeholder={`Add bowler to ${defendingTeam.name}...`}
+              className="input-field"
+              value={newDefendPlayer}
+              onChange={e => setNewDefendPlayer(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddDefendPlayer()}
+              style={{ fontSize: '0.82rem', padding: '6px 10px' }}
+            />
+            <button
+              type="button"
+              onClick={handleAddDefendPlayer}
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+            >
+              <Plus size={14} /> Add
+            </button>
           </div>
         </div>
 

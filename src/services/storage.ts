@@ -8,52 +8,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'gullyscore_settings_v1',
 };
 
-// Default sample teams for first time users
-export const DEFAULT_TEAMS: Team[] = [
-  {
-    id: 'team_strikers',
-    name: 'Gully Strikers',
-    shortName: 'GS',
-    emoji: '⚡',
-    color: '#10B981', // Turf emerald
-    players: [
-      { id: 'p_virat', name: 'Virat S.', jerseyNumber: 18, role: 'batter', isCaptain: true },
-      { id: 'p_rohit', name: 'Rohit K.', jerseyNumber: 45, role: 'batter' },
-      { id: 'p_surya', name: 'Surya Y.', jerseyNumber: 63, role: 'all_rounder' },
-      { id: 'p_hardik', name: 'Hardik P.', jerseyNumber: 33, role: 'all_rounder' },
-      { id: 'p_rishabh', name: 'Rishabh P.', jerseyNumber: 17, role: 'wicketkeeper', isWicketkeeper: true },
-      { id: 'p_bumrah', name: 'Jasprit B.', jerseyNumber: 93, role: 'bowler' },
-    ],
-  },
-  {
-    id: 'team_blasters',
-    name: 'Terrace Blasters',
-    shortName: 'TB',
-    emoji: '🔥',
-    color: '#F59E0B', // Amber flame
-    players: [
-      { id: 'p_babar', name: 'Aarav B.', jerseyNumber: 56, role: 'batter', isCaptain: true },
-      { id: 'p_rizwan', name: 'Kabir R.', jerseyNumber: 16, role: 'wicketkeeper', isWicketkeeper: true },
-      { id: 'p_shami', name: 'Dev S.', jerseyNumber: 11, role: 'bowler' },
-      { id: 'p_siraj', name: 'Ishaan M.', jerseyNumber: 73, role: 'bowler' },
-      { id: 'p_kuldeep', name: 'Arjun K.', jerseyNumber: 23, role: 'bowler' },
-      { id: 'p_jadeja', name: 'Rishi J.', jerseyNumber: 8, role: 'all_rounder' },
-    ],
-  },
-  {
-    id: 'team_kings',
-    name: 'Street Kings',
-    shortName: 'SK',
-    emoji: '👑',
-    color: '#8B5CF6', // Royal purple
-    players: [
-      { id: 'p_k1', name: 'Sameer K.', jerseyNumber: 7, role: 'all_rounder', isCaptain: true },
-      { id: 'p_k2', name: 'Aditya P.', jerseyNumber: 10, role: 'batter' },
-      { id: 'p_k3', name: 'Nikhil R.', jerseyNumber: 12, role: 'bowler' },
-      { id: 'p_k4', name: 'Tanmay V.', jerseyNumber: 99, role: 'wicketkeeper', isWicketkeeper: true },
-    ],
-  },
-];
+// Default sample teams is empty so users can start with fresh clean teams
+export const DEFAULT_TEAMS: Team[] = [];
 
 export const storage = {
   // Matches
@@ -116,14 +72,22 @@ export const storage = {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TEAMS);
       if (data) {
-        return JSON.parse(data);
+        const parsed: Team[] = JSON.parse(data);
+        // Exclude legacy mock sample teams if previously saved
+        return parsed.filter(t => !['team_strikers', 'team_blasters', 'team_kings'].includes(t.id));
       }
-      // Seed default teams if empty
-      this.saveTeams(DEFAULT_TEAMS);
-      return DEFAULT_TEAMS;
+      return [];
     } catch (e) {
       console.error('Failed to load teams', e);
-      return DEFAULT_TEAMS;
+      return [];
+    }
+  },
+
+  clearAllTeams(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.TEAMS);
+    } catch (e) {
+      console.error('Failed to clear teams', e);
     }
   },
 

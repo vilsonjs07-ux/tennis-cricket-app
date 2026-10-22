@@ -8,7 +8,7 @@ interface ScoreboardBannerProps {
 
 export const ScoreboardBanner: React.FC<ScoreboardBannerProps> = ({ match, innings }) => {
   const isSecondInnings = innings.inningsNumber === 2;
-  const maxOvers = match.settings.oversPerInnings;
+  const maxOvers = match.settings.oversPerInnings || match.settings.rules?.oversPerInnings || 6;
 
   return (
     <div

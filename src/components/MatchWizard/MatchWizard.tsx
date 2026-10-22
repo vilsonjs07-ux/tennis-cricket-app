@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useMatchStore } from '../../store/useMatchStore';
 import { MatchFormat, BallType, Player, Team, MatchSettings } from '../../types/cricket';
+import { DEFAULT_TENNIS_CRICKET_RULES } from '../../engine/scoringEngine';
 import {
   ChevronRight,
   ChevronLeft,
@@ -10,6 +11,7 @@ import {
   Plus,
   Minus,
   Coins,
+  Trash2,
 } from 'lucide-react';
 
 export const MatchWizard: React.FC = () => {
@@ -22,6 +24,7 @@ export const MatchWizard: React.FC = () => {
     updateWizardTeamA,
     wizardTeamB,
     updateWizardTeamB,
+    clearWizardTeams,
     finalizeMatchSetup,
     recordToss,
     startFirstInnings,
@@ -41,14 +44,20 @@ export const MatchWizard: React.FC = () => {
   const [newPlayerNameA, setNewPlayerNameA] = useState('');
   const [newPlayerNameB, setNewPlayerNameB] = useState('');
 
-  const overs = wizardSettings.oversPerInnings || 8;
+  const [step3NewBatter, setStep3NewBatter] = useState('');
+  const [step3NewBowler, setStep3NewBowler] = useState('');
+
+  const overs = wizardSettings.oversPerInnings || 6;
   const playersCount = wizardSettings.playersPerTeam || 8;
 
   const handleOversChange = (delta: number) => {
     navigator?.vibrate?.(15);
-    const current = wizardSettings.oversPerInnings || 8;
+    const current = wizardSettings.oversPerInnings || 6;
     const next = Math.min(50, Math.max(1, current + delta));
-    updateWizardSettings({ oversPerInnings: next });
+    updateWizardSettings({
+      oversPerInnings: next,
+      rules: { ...(wizardSettings.rules || DEFAULT_TENNIS_CRICKET_RULES), oversPerInnings: next },
+    });
   };
 
   const handlePlayersChange = (delta: number) => {
@@ -111,37 +120,113 @@ export const MatchWizard: React.FC = () => {
   const battingTeamPlayers = teamABatsFirst ? playersA : playersB;
   const bowlingTeamPlayers = teamABatsFirst ? playersB : playersA;
 
-  const handleStartMatch = () => {
-    if (!openingStrikerId || !openingNonStrikerId || !openingBowlerId) {
-      alert('Please select both opening batters and the opening bowler.');
-      return;
+  const handleAddStep3Batter = () => {
+    if (!step3NewBatter.trim()) return;
+    const isTeamABatting = teamABatsFirst;
+    const newP: Player = {
+      id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: step3NewBatter.trim(),
+      role: 'batter',
+    };
+    if (isTeamABatting) {
+      updateWizardTeamA({ players: [...(wizardTeamA.players || []), newP] });
+    } else {
+      updateWizardTeamB({ players: [...(wizardTeamB.players || []), newP] });
     }
-    if (openingStrikerId === openingNonStrikerId) {
+    if (!openingStrikerId) {
+      setOpeningStrikerId(newP.id);
+    } else if (!openingNonStrikerId && openingStrikerId !== newP.id) {
+      setOpeningNonStrikerId(newP.id);
+    }
+    setStep3NewBatter('');
+  };
+
+  const handleAddStep3Bowler = () => {
+    if (!step3NewBowler.trim()) return;
+    const isTeamABowling = !teamABatsFirst;
+    const newP: Player = {
+      id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: step3NewBowler.trim(),
+      role: 'bowler',
+    };
+    if (isTeamABowling) {
+      updateWizardTeamA({ players: [...(wizardTeamA.players || []), newP] });
+    } else {
+      updateWizardTeamB({ players: [...(wizardTeamB.players || []), newP] });
+    }
+    if (!openingBowlerId) {
+      setOpeningBowlerId(newP.id);
+    }
+    setStep3NewBowler('');
+  };
+
+  const handleStartMatch = () => {
+    let finalPlayersA = [...(wizardTeamA.players || [])];
+    let finalPlayersB = [...(wizardTeamB.players || [])];
+    let strikerId = openingStrikerId;
+    let nonStrikerId = openingNonStrikerId;
+    let bowlerId = openingBowlerId;
+
+    const battingList = teamABatsFirst ? finalPlayersA : finalPlayersB;
+    const bowlingList = teamABatsFirst ? finalPlayersB : finalPlayersA;
+
+    if (!strikerId) {
+      if (battingList.length > 0) {
+        strikerId = battingList[0].id;
+      } else {
+        const p1: Player = { id: `p_${Date.now()}_1`, name: 'Batter 1', role: 'batter' };
+        battingList.push(p1);
+        strikerId = p1.id;
+      }
+    }
+
+    if (!nonStrikerId) {
+      const remainingBatters = battingList.filter(p => p.id !== strikerId);
+      if (remainingBatters.length > 0) {
+        nonStrikerId = remainingBatters[0].id;
+      } else {
+        const p2: Player = { id: `p_${Date.now()}_2`, name: 'Batter 2', role: 'batter' };
+        battingList.push(p2);
+        nonStrikerId = p2.id;
+      }
+    }
+
+    if (!bowlerId) {
+      if (bowlingList.length > 0) {
+        bowlerId = bowlingList[0].id;
+      } else {
+        const b1: Player = { id: `p_${Date.now()}_3`, name: 'Bowler 1', role: 'bowler' };
+        bowlingList.push(b1);
+        bowlerId = b1.id;
+      }
+    }
+
+    if (strikerId === nonStrikerId) {
       alert('Striker and Non-Striker must be two different players.');
       return;
     }
 
     const teamA: Team = {
       id: wizardTeamA.id || 'team_a',
-      name: wizardTeamA.name || 'Royal Strikers',
-      shortName: wizardTeamA.shortName || 'RS',
-      emoji: wizardTeamA.emoji || '⚡',
+      name: wizardTeamA.name?.trim() || 'Team 1',
+      shortName: wizardTeamA.shortName?.trim() || 'T1',
+      emoji: wizardTeamA.emoji || '🏏',
       color: wizardTeamA.color || '#10B981',
-      players: playersA,
+      players: finalPlayersA,
     };
 
     const teamB: Team = {
       id: wizardTeamB.id || 'team_b',
-      name: wizardTeamB.name || 'Thunder Titans',
-      shortName: wizardTeamB.shortName || 'TT',
-      emoji: wizardTeamB.emoji || '🔥',
+      name: wizardTeamB.name?.trim() || 'Team 2',
+      shortName: wizardTeamB.shortName?.trim() || 'T2',
+      emoji: wizardTeamB.emoji || '⚡',
       color: wizardTeamB.color || '#3B82F6',
-      players: playersB,
+      players: finalPlayersB,
     };
 
     const finalSettings: MatchSettings = {
       title: wizardSettings.title || 'Tennis Cricket Match',
-      format: (wizardSettings.format as MatchFormat) || 't10',
+      format: (wizardSettings.format as MatchFormat) || 'custom',
       date: wizardSettings.date || new Date().toISOString().split('T')[0],
       location: wizardSettings.location,
       ballType: (wizardSettings.ballType as BallType) || 'tennis_heavy',
@@ -149,7 +234,9 @@ export const MatchWizard: React.FC = () => {
       oversPerInnings: overs,
       inningsPerTeam: 1,
       rules: {
-        ...wizardSettings.rules!,
+        ...(wizardSettings.rules || DEFAULT_TENNIS_CRICKET_RULES),
+        oversPerInnings: overs,
+        maxOversPerBowler: Math.max(1, Math.ceil(overs / (playersCount >= 4 ? 4 : 2))),
         allowLBW: false, // NO LBW IN TENNIS BALL CRICKET
       },
     };
@@ -220,7 +307,7 @@ export const MatchWizard: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label className="input-label" style={{ marginBottom: 0 }}>Overs per Innings</label>
               <span style={{ fontSize: '0.82rem', color: 'var(--turf-green)', fontWeight: 800 }}>
-                {wizardSettings.oversPerInnings || 8} OVERS
+                {wizardSettings.oversPerInnings || 6} OVERS
               </span>
             </div>
 
@@ -265,7 +352,7 @@ export const MatchWizard: React.FC = () => {
                   userSelect: 'text',
                   WebkitUserSelect: 'text',
                 }}
-                value={wizardSettings.oversPerInnings === 0 ? '' : (wizardSettings.oversPerInnings ?? 8)}
+                value={wizardSettings.oversPerInnings === 0 ? '' : (wizardSettings.oversPerInnings ?? 6)}
                 onChange={e => {
                   const val = e.target.value;
                   if (val === '') {
@@ -273,13 +360,20 @@ export const MatchWizard: React.FC = () => {
                   } else {
                     const num = parseInt(val, 10);
                     if (!isNaN(num)) {
-                      updateWizardSettings({ oversPerInnings: Math.min(50, Math.max(1, num)) });
+                      const next = Math.min(50, Math.max(1, num));
+                      updateWizardSettings({
+                        oversPerInnings: next,
+                        rules: { ...(wizardSettings.rules || DEFAULT_TENNIS_CRICKET_RULES), oversPerInnings: next },
+                      });
                     }
                   }
                 }}
                 onBlur={() => {
                   if (!wizardSettings.oversPerInnings || wizardSettings.oversPerInnings < 1) {
-                    updateWizardSettings({ oversPerInnings: 8 });
+                    updateWizardSettings({
+                      oversPerInnings: 6,
+                      rules: { ...(wizardSettings.rules || DEFAULT_TENNIS_CRICKET_RULES), oversPerInnings: 6 },
+                    });
                   }
                 }}
               />
@@ -309,13 +403,16 @@ export const MatchWizard: React.FC = () => {
 
             {/* Quick 1-Tap Presets */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-              {[4, 6, 8, 10, 12, 15, 20].map(ov => (
+              {[2, 4, 6, 8, 10, 12, 15, 20].map(ov => (
                 <button
                   key={ov}
                   type="button"
                   onClick={() => {
                     navigator?.vibrate?.(15);
-                    updateWizardSettings({ oversPerInnings: ov });
+                    updateWizardSettings({
+                      oversPerInnings: ov,
+                      rules: { ...(wizardSettings.rules || DEFAULT_TENNIS_CRICKET_RULES), oversPerInnings: ov },
+                    });
                   }}
                   style={{
                     flex: 1,
@@ -324,9 +421,9 @@ export const MatchWizard: React.FC = () => {
                     borderRadius: 'var(--radius-sm)',
                     fontSize: '0.76rem',
                     fontWeight: 700,
-                    background: (wizardSettings.oversPerInnings || 8) === ov ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                    border: `1px solid ${(wizardSettings.oversPerInnings || 8) === ov ? '#10B981' : 'var(--border-card)'}`,
-                    color: (wizardSettings.oversPerInnings || 8) === ov ? '#34D399' : 'var(--text-secondary)',
+                    background: (wizardSettings.oversPerInnings || 6) === ov ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `1px solid ${(wizardSettings.oversPerInnings || 6) === ov ? '#10B981' : 'var(--border-card)'}`,
+                    color: (wizardSettings.oversPerInnings || 6) === ov ? '#34D399' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     touchAction: 'manipulation',
                   }}
@@ -509,6 +606,38 @@ export const MatchWizard: React.FC = () => {
       {/* STEP 2: TEAM SETUP */}
       {wizardStep === 2 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Quick Clear All Button */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              Enter custom team & player names, or add them on the field!
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                clearWizardTeams();
+                setNewPlayerNameA('');
+                setNewPlayerNameB('');
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#F87171',
+                borderRadius: 'var(--radius-sm)',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                flexShrink: 0,
+              }}
+            >
+              <Trash2 size={13} />
+              <span>Clear All</span>
+            </button>
+          </div>
+
           {/* Team A */}
           <div
             style={{
@@ -519,10 +648,11 @@ export const MatchWizard: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '1.3rem' }}>{wizardTeamA.emoji || '⚡'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <span style={{ fontSize: '1.3rem' }}>{wizardTeamA.emoji || '🏏'}</span>
                 <input
                   type="text"
+                  placeholder="Team 1 Name (e.g. Red Warriors)"
                   value={wizardTeamA.name || ''}
                   onChange={e => updateWizardTeamA({ name: e.target.value })}
                   style={{
@@ -534,48 +664,55 @@ export const MatchWizard: React.FC = () => {
                     fontSize: '1.05rem',
                     fontWeight: 800,
                     padding: '2px 4px',
+                    width: '100%',
                   }}
                 />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 8, whiteSpace: 'nowrap' }}>
                 {playersA.length} Players
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {playersA.map(p => (
-                <div
-                  key={p.id}
-                  style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-full)',
-                    padding: '4px 10px',
-                    fontSize: '0.78rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <span>{p.name}</span>
-                  <button
-                    onClick={() =>
-                      updateWizardTeamA({
-                        players: playersA.filter(x => x.id !== p.id),
-                      })
-                    }
-                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}
+            {playersA.length === 0 ? (
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 10, fontStyle: 'italic' }}>
+                No players added yet. Add names below, or add them on the fly while scoring!
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {playersA.map(p => (
+                  <div
+                    key={p.id}
+                    style={{
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-full)',
+                      padding: '4px 10px',
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <span>{p.name}</span>
+                    <button
+                      onClick={() =>
+                        updateWizardTeamA({
+                          players: playersA.filter(x => x.id !== p.id),
+                        })
+                      }
+                      style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 6 }}>
               <input
                 type="text"
-                placeholder="Add player name"
+                placeholder="Add player name..."
                 className="input-field"
                 value={newPlayerNameA}
                 onChange={e => setNewPlayerNameA(e.target.value)}
@@ -598,10 +735,11 @@ export const MatchWizard: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '1.3rem' }}>{wizardTeamB.emoji || '🔥'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <span style={{ fontSize: '1.3rem' }}>{wizardTeamB.emoji || '⚡'}</span>
                 <input
                   type="text"
+                  placeholder="Team 2 Name (e.g. Blue Titans)"
                   value={wizardTeamB.name || ''}
                   onChange={e => updateWizardTeamB({ name: e.target.value })}
                   style={{
@@ -613,48 +751,55 @@ export const MatchWizard: React.FC = () => {
                     fontSize: '1.05rem',
                     fontWeight: 800,
                     padding: '2px 4px',
+                    width: '100%',
                   }}
                 />
               </div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 8, whiteSpace: 'nowrap' }}>
                 {playersB.length} Players
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {playersB.map(p => (
-                <div
-                  key={p.id}
-                  style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-full)',
-                    padding: '4px 10px',
-                    fontSize: '0.78rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <span>{p.name}</span>
-                  <button
-                    onClick={() =>
-                      updateWizardTeamB({
-                        players: playersB.filter(x => x.id !== p.id),
-                      })
-                    }
-                    style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}
+            {playersB.length === 0 ? (
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 10, fontStyle: 'italic' }}>
+                No players added yet. Add names below, or add them on the fly while scoring!
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {playersB.map(p => (
+                  <div
+                    key={p.id}
+                    style={{
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-full)',
+                      padding: '4px 10px',
+                      fontSize: '0.78rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <span>{p.name}</span>
+                    <button
+                      onClick={() =>
+                        updateWizardTeamB({
+                          players: playersB.filter(x => x.id !== p.id),
+                        })
+                      }
+                      style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 6 }}>
               <input
                 type="text"
-                placeholder="Add player name"
+                placeholder="Add player name..."
                 className="input-field"
                 value={newPlayerNameB}
                 onChange={e => setNewPlayerNameB(e.target.value)}
@@ -885,6 +1030,66 @@ export const MatchWizard: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Quick Add Players in Step 3 */}
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                Don't see your players? Add them quickly below or start now and add them during the game:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {/* Add Batter */}
+                <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 10px', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34D399', marginBottom: 4 }}>
+                    + Batter to {teamABatsFirst ? (wizardTeamA.name || 'Team 1') : (wizardTeamB.name || 'Team 2')}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <input
+                      type="text"
+                      placeholder="Batter name..."
+                      value={step3NewBatter}
+                      onChange={e => setStep3NewBatter(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddStep3Batter()}
+                      className="input-field"
+                      style={{ fontSize: '0.78rem', padding: '6px 8px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddStep3Batter}
+                      className="btn-secondary"
+                      style={{ padding: '6px 8px', fontSize: '0.74rem', background: '#10B981', color: '#0F172A', fontWeight: 800, flexShrink: 0 }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add Bowler */}
+                <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '8px 10px', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#38BDF8', marginBottom: 4 }}>
+                    + Bowler to {teamABatsFirst ? (wizardTeamB.name || 'Team 2') : (wizardTeamA.name || 'Team 1')}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <input
+                      type="text"
+                      placeholder="Bowler name..."
+                      value={step3NewBowler}
+                      onChange={e => setStep3NewBowler(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddStep3Bowler()}
+                      className="input-field"
+                      style={{ fontSize: '0.78rem', padding: '6px 8px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddStep3Bowler}
+                      className="btn-secondary"
+                      style={{ padding: '6px 8px', fontSize: '0.74rem', background: '#38BDF8', color: '#0F172A', fontWeight: 800, flexShrink: 0 }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

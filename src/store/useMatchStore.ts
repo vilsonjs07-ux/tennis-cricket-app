@@ -8,6 +8,7 @@ import {
   MatchSettings,
   Player,
   Team,
+  TennisCricketRules,
 } from '../types/cricket';
 import {
   calculateMatchResult,
@@ -57,6 +58,12 @@ interface MatchStoreState {
   undoDelivery: () => void;
   endMatchManually: () => void;
   
+  // Wizard management
+  clearWizardTeams: () => void;
+
+  // Mid-Match Dynamic Player Addition (Batting & Bowling)
+  addPlayerToCurrentMatch: (teamId: string, playerName: string, role?: Player['role']) => Player | null;
+
   // Storage & Management
   loadMatchById: (id: string) => void;
   deleteMatchById: (id: string) => void;
@@ -79,36 +86,44 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
     
     wizardStep: 1,
     wizardSettings: {
-      title: 'Tennis Premier League Match',
-      format: 't10',
+      title: 'Tennis Cricket Match',
+      format: 'custom',
       date: new Date().toISOString().split('T')[0],
-      location: 'Turf Ground',
+      location: '',
       ballType: 'tennis_heavy',
       playersPerTeam: 8,
-      oversPerInnings: 8,
+      oversPerInnings: 6,
       inningsPerTeam: 1,
-      rules: { ...DEFAULT_TENNIS_CRICKET_RULES },
+      rules: { ...DEFAULT_TENNIS_CRICKET_RULES, oversPerInnings: 6 },
     },
     wizardTeamA: {
-      name: 'Royal Strikers',
-      shortName: 'RS',
-      emoji: '⚡',
+      name: '',
+      shortName: 'T1',
+      emoji: '🏏',
       color: '#10B981',
-      players: savedTeams[0]?.players || [],
+      players: [],
     },
     wizardTeamB: {
-      name: 'Thunder Titans',
-      shortName: 'TT',
-      emoji: '🔥',
+      name: '',
+      shortName: 'T2',
+      emoji: '⚡',
       color: '#3B82F6',
-      players: savedTeams[1]?.players || [],
+      players: [],
     },
 
     setActiveTab: (tab: AppTab) => set({ activeTab: tab }),
     setWizardStep: (step: number) => set({ wizardStep: step }),
 
     updateWizardSettings: (settings: Partial<MatchSettings>) =>
-      set(state => ({ wizardSettings: { ...state.wizardSettings, ...settings } })),
+      set(state => ({
+        wizardSettings: {
+          ...state.wizardSettings,
+          ...settings,
+          rules: settings.oversPerInnings
+            ? { ...(state.wizardSettings.rules || DEFAULT_TENNIS_CRICKET_RULES), oversPerInnings: settings.oversPerInnings }
+            : state.wizardSettings.rules,
+        },
+      })),
 
     updateWizardTeamA: (team: Partial<Team>) =>
       set(state => ({ wizardTeamA: { ...state.wizardTeamA, ...team } })),
@@ -116,24 +131,29 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
     updateWizardTeamB: (team: Partial<Team>) =>
       set(state => ({ wizardTeamB: { ...state.wizardTeamB, ...team } })),
 
+    clearWizardTeams: () =>
+      set({
+        wizardTeamA: { name: '', shortName: 'T1', emoji: '🏏', color: '#10B981', players: [] },
+        wizardTeamB: { name: '', shortName: 'T2', emoji: '⚡', color: '#3B82F6', players: [] },
+      }),
+
     initNewMatchWizard: () => {
-      const teams = get().savedTeams;
       set({
         wizardStep: 1,
         activeTab: 'wizard',
         wizardSettings: {
-          title: `Match #${get().matches.length + 1} - Tennis Cup`,
-          format: 't10',
+          title: `Match #${get().matches.length + 1}`,
+          format: 'custom',
           date: new Date().toISOString().split('T')[0],
-          location: 'Cricket Ground',
+          location: '',
           ballType: 'tennis_heavy',
           playersPerTeam: 8,
-          oversPerInnings: 8,
+          oversPerInnings: 6,
           inningsPerTeam: 1,
-          rules: { ...DEFAULT_TENNIS_CRICKET_RULES },
+          rules: { ...DEFAULT_TENNIS_CRICKET_RULES, oversPerInnings: 6 },
         },
-        wizardTeamA: teams[0] ? { ...teams[0] } : { name: 'Royal Strikers', emoji: '⚡', color: '#10B981', players: [] },
-        wizardTeamB: teams[1] ? { ...teams[1] } : { name: 'Thunder Titans', emoji: '🔥', color: '#3B82F6', players: [] },
+        wizardTeamA: { name: '', shortName: 'T1', emoji: '🏏', color: '#10B981', players: [] },
+        wizardTeamB: { name: '', shortName: 'T2', emoji: '⚡', color: '#3B82F6', players: [] },
       });
     },
 
@@ -188,6 +208,12 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
       const battingTeam = battingFirstIsTeamA ? match.teamA : match.teamB;
       const bowlingTeam = battingFirstIsTeamA ? match.teamB : match.teamA;
 
+      const effectiveOvers = match.settings.oversPerInnings || match.settings.rules.oversPerInnings || 6;
+      const effectiveRules: TennisCricketRules = {
+        ...match.settings.rules,
+        oversPerInnings: effectiveOvers,
+      };
+
       const innings1 = createInitialInnings(
         1,
         battingTeam,
@@ -195,7 +221,7 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
         strikerId,
         nonStrikerId,
         bowlerId,
-        match.settings.rules
+        effectiveRules
       );
 
       const updated: Match = {
@@ -218,6 +244,12 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
       const battingTeam = match.innings1.battingTeamId === match.teamA.id ? match.teamB : match.teamA;
       const bowlingTeam = match.innings1.battingTeamId === match.teamA.id ? match.teamA : match.teamB;
 
+      const effectiveOvers = match.settings.oversPerInnings || match.settings.rules.oversPerInnings || 6;
+      const effectiveRules: TennisCricketRules = {
+        ...match.settings.rules,
+        oversPerInnings: effectiveOvers,
+      };
+
       const innings2 = createInitialInnings(
         2,
         battingTeam,
@@ -225,7 +257,7 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
         strikerId,
         nonStrikerId,
         bowlerId,
-        match.settings.rules,
+        effectiveRules,
         target
       );
 
@@ -463,6 +495,46 @@ export const useMatchStore = create<MatchStoreState>((set, get) => {
       set(state => ({
         savedTeams: state.savedTeams.map(t => (t.id === team.id ? team : t)),
       }));
+    },
+
+    addPlayerToCurrentMatch: (teamId: string, playerName: string, role?: Player['role']) => {
+      const match = get().currentMatch;
+      const trimmed = playerName.trim();
+      if (!match || !trimmed) return null;
+
+      const isTeamA = match.teamA.id === teamId;
+      const isTeamB = match.teamB.id === teamId;
+      if (!isTeamA && !isTeamB) return null;
+
+      const targetTeam = isTeamA ? match.teamA : match.teamB;
+      const newPlayer: Player = {
+        id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: trimmed,
+        jerseyNumber: targetTeam.players.length + 1,
+        role: role || 'all_rounder',
+      };
+
+      const updatedTeamA = isTeamA
+        ? { ...match.teamA, players: [...match.teamA.players, newPlayer] }
+        : match.teamA;
+      const updatedTeamB = isTeamB
+        ? { ...match.teamB, players: [...match.teamB.players, newPlayer] }
+        : match.teamB;
+
+      const updatedMatch: Match = {
+        ...match,
+        teamA: updatedTeamA,
+        teamB: updatedTeamB,
+        updatedAt: Date.now(),
+      };
+
+      storage.saveMatch(updatedMatch);
+      set(state => ({
+        currentMatch: updatedMatch,
+        matches: state.matches.map(m => (m.id === updatedMatch.id ? updatedMatch : m)),
+      }));
+
+      return newPlayer;
     },
   };
 });

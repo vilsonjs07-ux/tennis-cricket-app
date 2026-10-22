@@ -205,6 +205,7 @@ export const LiveScoringScreen: React.FC = () => {
           setBowler(id);
           setIsNextBowlerModalOpen(false);
         }}
+        onClose={() => setIsNextBowlerModalOpen(false)}
         innings={innings}
         bowlingTeam={bowlingTeam}
         allowConsecutive={currentMatch.settings.rules.allowConsecutiveOvers}

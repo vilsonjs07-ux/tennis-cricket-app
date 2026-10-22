@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { DismissalType, InningsState, Player, Team } from '../../types/cricket';
 import { ScoreInput } from '../../engine/scoringEngine';
-import { X, ShieldAlert, Check, Ban } from 'lucide-react';
+import { useMatchStore } from '../../store/useMatchStore';
+import { X, ShieldAlert, Check, Ban, Plus } from 'lucide-react';
 
 interface DismissalModalProps {
   isOpen: boolean;
@@ -31,13 +32,35 @@ export const DismissalModal: React.FC<DismissalModalProps> = ({
   const [runsBeforeOut, setRunsBeforeOut] = useState<number>(0);
   const [incomingPlayerId, setIncomingPlayerId] = useState<string>('');
 
+  const { addPlayerToCurrentMatch } = useMatchStore();
+  const [newBatterName, setNewBatterName] = useState<string>('');
+
   const alreadyBattedIds = Object.keys(innings.batters);
   const availableBatters = battingTeam.players.filter(p => !alreadyBattedIds.includes(p.id));
 
+  const handleAddNewBatter = () => {
+    if (!newBatterName.trim()) return;
+    const added = addPlayerToCurrentMatch(battingTeam.id, newBatterName.trim(), 'batter');
+    if (added) {
+      setIncomingPlayerId(added.id);
+      setNewBatterName('');
+    }
+  };
+
   const handleConfirm = () => {
-    const isLastWicket = availableBatters.length === 0;
-    if (!isLastWicket && !incomingPlayerId) {
-      alert('Please select the incoming next batter.');
+    let nextBatterId = incomingPlayerId;
+    if (!nextBatterId && newBatterName.trim()) {
+      const added = addPlayerToCurrentMatch(battingTeam.id, newBatterName.trim(), 'batter');
+      if (added) {
+        nextBatterId = added.id;
+        setIncomingPlayerId(added.id);
+        setNewBatterName('');
+      }
+    }
+
+    const isLastWicket = availableBatters.length === 0 && !nextBatterId;
+    if (!isLastWicket && !nextBatterId) {
+      alert('Please select or add the incoming next batter.');
       return;
     }
 
@@ -47,7 +70,7 @@ export const DismissalModal: React.FC<DismissalModalProps> = ({
         dismissedPlayerId: dismissedId,
         fielderPlayerId: fielderId || undefined,
         runsBeforeDismissal: runsBeforeOut,
-        incomingPlayerId: incomingPlayerId || undefined,
+        incomingPlayerId: nextBatterId || undefined,
       },
     };
 
@@ -261,9 +284,44 @@ export const DismissalModal: React.FC<DismissalModalProps> = ({
               marginBottom: 12,
             }}
           >
-            ⚠️ No more batters available. Innings will conclude All Out!
+            ⚠️ No more batters in squad. Add a new player below or finish All Out!
           </div>
         )}
+
+        {/* ➕ Add New Batter While Batting */}
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px',
+            background: 'rgba(56, 189, 248, 0.06)',
+            border: '1px dashed rgba(56, 189, 248, 0.4)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
+          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#38BDF8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Plus size={14} />
+            <span>Add New Batter to {battingTeam.name}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              placeholder="Enter new batter name..."
+              className="input-field"
+              value={newBatterName}
+              onChange={e => setNewBatterName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddNewBatter()}
+              style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+            />
+            <button
+              type="button"
+              onClick={handleAddNewBatter}
+              className="btn-secondary"
+              style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: '0.8rem', background: '#38BDF8', color: '#0F172A', fontWeight: 800 }}
+            >
+              Add & Select
+            </button>
+          </div>
+        </div>
 
         {/* Action Button */}
         <button

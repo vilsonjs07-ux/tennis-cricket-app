@@ -258,4 +258,40 @@ describe('TennisScore - Tennis Ball Cricket Scoring Engine', () => {
     expect(result.winnerTeamName).toBe('Thunder Titans');
     expect(result.marginText).toContain('Thunder Titans won by');
   });
+
+  it('completes innings at exactly 4.0 overs (24 legal balls) when match is configured for 4 overs', () => {
+    const rules4Overs: TennisCricketRules = {
+      ...DEFAULT_TENNIS_CRICKET_RULES,
+      oversPerInnings: 4,
+      ballsPerOver: 6,
+    };
+
+    let inn1 = createInitialInnings(1, teamA, teamB, 'p1', 'p2', 'b1', rules4Overs);
+    // Bowl 23 legal balls
+    for (let i = 0; i < 23; i++) {
+      const res = recordDelivery(inn1, { batterRuns: 1 }, rules4Overs, teamA.players, teamB.players);
+      inn1 = res.nextState;
+      expect(res.isInningsEnded).toBe(false);
+    }
+    expect(inn1.legalDeliveries).toBe(23);
+
+    // 24th legal ball should end innings 1
+    const ball24 = recordDelivery(inn1, { batterRuns: 1 }, rules4Overs, teamA.players, teamB.players);
+    expect(ball24.nextState.legalDeliveries).toBe(24);
+    expect(ball24.nextState.oversFormatted).toBe('4.0');
+    expect(ball24.isInningsEnded).toBe(true);
+
+    // Now test 2nd innings with high target so it doesn't chase early
+    let inn2 = createInitialInnings(2, teamB, teamA, 'b1', 'b2', 'p1', rules4Overs, 200);
+    for (let i = 0; i < 23; i++) {
+      const res = recordDelivery(inn2, { batterRuns: 0 }, rules4Overs, teamB.players, teamA.players);
+      inn2 = res.nextState;
+      expect(res.isInningsEnded).toBe(false);
+    }
+    const ball24Inn2 = recordDelivery(inn2, { batterRuns: 0 }, rules4Overs, teamB.players, teamA.players);
+    expect(ball24Inn2.nextState.legalDeliveries).toBe(24);
+    expect(ball24Inn2.nextState.oversFormatted).toBe('4.0');
+    expect(ball24Inn2.isInningsEnded).toBe(true);
+  });
 });
+
